@@ -17,26 +17,26 @@ env:
   USERNAME : "azureuser"
 
 jobs:
-  build-and-push:
-    name: Build and Push Docker Image to ACR
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+  # build-and-push:
+  #   name: Build and Push Docker Image to ACR
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v3
 
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+  #     - name: Login to Azure
+  #       uses: azure/login@v1
+  #       with:
+  #         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Login to Azure Container Registry
-        run: |
-          az acr login --name $ACR_NAME
+  #     - name: Login to Azure Container Registry
+  #       run: |
+  #         az acr login --name $ACR_NAME
 
-      - name: Build and Push Docker Image
-        run: |
-          docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG .
-          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+  #     - name: Build and Push Docker Image
+  #       run: |
+  #         docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG .
+  #         docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
 
   deploy-to-vm:
     name: Deploy to Virtual Machine
@@ -51,7 +51,7 @@ jobs:
         with:
           host: ${{ secrets.VM_IP }}
           username: $USERNAME
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.PASSWORD }}
           script: |
             docker pull $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
             docker stop $IMAGE_NAME || true
