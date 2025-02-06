@@ -14,6 +14,9 @@ env:
   # CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
   NAMESPACE: "default" 
   VM_IP: ${{ secrets.VM_IP }}
+  APP_ID: ${{ secrets.APP_ID }}
+  CLIENT_SECRET : ${{ secrets.CLIENT_SECRET }}
+  TENANT_ID: ${{ secrets.TENANT_ID }}
 
 jobs:
   # build-and-push:
@@ -52,7 +55,7 @@ jobs:
           username: azureuser
           password: ${{ secrets.PASSWORD }}
           script: |
-            az login --service-principal --username ${{ secrets.APP_ID }} --password ${{ secrets.CLIENT_SECRET }} --tenant ${{ secrets.TENANT_ID }}
+            az login --service-principal --username $APP_ID --password $CLIENT_ID --tenant $TENANT_ID
             az acr login --name $ACR_NAME
             docker pull $ACR_NAME.azurecr.io/$IMAGE_NAME:latest
             docker stop $IMAGE_NAME || true
