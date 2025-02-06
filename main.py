@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import os
 import io
 import logging
+import csv
 
 app = FastAPI()
 load_dotenv()
@@ -28,6 +29,28 @@ async def list_datasets():
     try:
         blobs = container_client.list_blobs()
         return {"datasets": [blob.name for blob in blobs]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/get-all/{filename}")
+async def stream_dataset(filename: str, version: str = "1"):
+    """Stream dataset content from Azure Blob Storage (CSV, JSONL, or JSON)"""
+    try:
+        versioned_filename = get_versioned_filename(filename, version)
+        blob_client = container_client.get_blob_client(versioned_filename)
+        
+        # Stream the dataset
+        stream = blob_client.download_blob()
+        content = stream.readall().decode("utf-8")
+        ext = filename.split(".")[-1].lower()
+        if ext == "csv":
+            csv_reader = csv.DictReader(io.StringIO(content))
+            columns = csv_reader.fieldnames
+            rows = [row for row in csv_reader]
+            return {"filename": versioned_filename, "type": "csv", "columns": columns, "rows": rows}
+        
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -106,7 +129,6 @@ async def stream_dataset(filename: str, version: str = "1"):
         versioned_filename = get_versioned_filename(filename, version)
         blob_client = container_client.get_blob_client(versioned_filename)
         
-        # Stream the dataset
         stream = blob_client.download_blob()
         ext = filename.split(".")[-1].lower()
 
