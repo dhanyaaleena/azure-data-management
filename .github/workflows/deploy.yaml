@@ -35,7 +35,7 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG .
-          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$
+          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
 
   deploy-to-vm:
     name: Deploy to Virtual Machine
