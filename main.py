@@ -14,7 +14,7 @@ load_dotenv()
 
 AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING")
 blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)
-CONTAINER_NAME = os.getenv("CONTAINER_NAME")
+CONTAINER_NAME = "datasets"
 container_client = blob_service_client.get_container_client(CONTAINER_NAME)
 
 # Utility function to handle versioning
