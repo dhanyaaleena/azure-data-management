@@ -14,7 +14,6 @@ env:
   # CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
   NAMESPACE: "default" 
   VM_IP: ${{ secrets.VM_IP }}
-  USERNAME : "azureuser"
 
 jobs:
   # build-and-push:
@@ -50,7 +49,7 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VM_IP }}
-          username: $USERNAME
+          username: azureuser
           password: ${{ secrets.PASSWORD }}
           script: |
             docker pull $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
