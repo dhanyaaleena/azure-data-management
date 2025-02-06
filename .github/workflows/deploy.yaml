@@ -1,0 +1,63 @@
+name: Deploy to AKS
+
+on:
+  push:
+    branches:
+      - master  # Trigger on push to main branch
+  workflow_dispatch: 
+
+env:
+  RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+  ACR_NAME: ${{ secrets.ACR_NAME }}
+  IMAGE_NAME: "dataset-api"
+  IMAGE_TAG: "latest"
+  # CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
+  NAMESPACE: "default" 
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image to ACR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name $ACR_NAME
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG .
+          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+
+  # deploy-to-aks:
+  #   name: Deploy to AKS
+  #   runs-on: ubuntu-latest
+  #   needs: build-and-push  # Run after image is pushed
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v3
+
+  #     - name: Login to Azure
+  #       uses: azure/login@v1
+  #       with:
+  #         creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+  #     - name: Get AKS Credentials
+  #       run: |
+  #         az aks get-credentials --resource-group $RESOURCE_GROUP --name $CLUSTER_NAME
+
+  #     - name: Deploy to AKS
+  #       run: |
+  #         kubectl apply -f k8s/deployment.yml
+  #         kubectl apply -f k8s/service.yml
+
+  #     - name: Verify Deployment
+  #       run: |
+  #         kubectl rollout status deployment/$IMAGE_NAME -n $NAMESPACE
