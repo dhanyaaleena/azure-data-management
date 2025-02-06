@@ -13,6 +13,7 @@ env:
   IMAGE_TAG: "latest"
   # CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
   NAMESPACE: "default" 
+  VM_IP: ${{ secrets.VM_IP }}
 
 jobs:
   build-and-push:
@@ -34,7 +35,30 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG .
-          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$
+
+  deploy-to-vm:
+    name: Deploy to Virtual Machine
+    runs-on: ubuntu-latest
+    needs: build-and-push 
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Deploy to VM
+        run: |
+          # Create SSH directory and write the private key
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          # SSH into the VM and deploy the Docker container
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@$VM_IP << 'EOF'
+            docker pull $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+            docker stop $IMAGE_NAME || true
+            docker rm $IMAGE_NAME || true
+            docker run -d --name $IMAGE_NAME -p 80:80 $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+          EOF
 
   # deploy-to-aks:
   #   name: Deploy to AKS

@@ -23,9 +23,7 @@ idna==3.10
 isodate==0.7.2
 multidict==6.1.0
 multiprocess==0.70.16
-numpy==2.2.2
 packaging==24.2
-pandas==2.2.3
 propcache==0.2.1
 pyarrow==19.0.0
 pycparser==2.22

@@ -1,13 +1,13 @@
+import asyncio
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from azure.storage.blob import BlobServiceClient, BlobSasPermissions, generate_blob_sas
 from datetime import datetime, timedelta, timezone
-import pandas as pd
+from fastapi.responses import StreamingResponse
 from huggingface_hub import hf_hub_download
 from dotenv import load_dotenv
 import os
-import csv
-import json
 import io
+import logging
 
 app = FastAPI()
 load_dotenv()
@@ -71,8 +71,8 @@ async def upload_dataset(file: UploadFile = File(...), version: str = "1"):
         blob_client = container_client.get_blob_client(filename)
         
         ext = file.filename.split(".")[-1].lower()
-        if ext not in ["csv", "jsonl", "json"]:  # Add "json" to supported formats
-            raise HTTPException(status_code=400, detail="Unsupported file format. Only CSV, JSONL, and JSON are allowed.")
+        if ext != "csv":  # Add "json" to supported formats
+            raise HTTPException(status_code=400, detail="Unsupported file format. Only CSV is allowed.")
 
         # Read file content
         content = await file.read()
@@ -86,6 +86,19 @@ async def upload_dataset(file: UploadFile = File(...), version: str = "1"):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+async def generate_stream(stream):
+    buffer = io.BytesIO()
+    for chunk in stream.chunks():
+        buffer.write(chunk)
+        buffer.seek(0)
+        while True:
+            line = buffer.readline()
+            if not line:
+                break
+            yield line
+            await asyncio.sleep(1)
+
+        
 @app.get("/stream/{filename}")
 async def stream_dataset(filename: str, version: str = "1"):
     """Stream dataset content from Azure Blob Storage (CSV, JSONL, or JSON)"""
@@ -95,28 +108,15 @@ async def stream_dataset(filename: str, version: str = "1"):
         
         # Stream the dataset
         stream = blob_client.download_blob()
-        content = stream.readall().decode("utf-8")
-
         ext = filename.split(".")[-1].lower()
 
         if ext == "csv":
-            csv_reader = csv.DictReader(io.StringIO(content))
-            columns = csv_reader.fieldnames
-            rows = [row for row in csv_reader]
-            return {"filename": versioned_filename, "type": "csv", "columns": columns, "rows": rows}
-        
-        elif ext == "jsonl":
-            json_lines = [json.loads(line) for line in content.strip().split("\n")]
-            return {"filename": versioned_filename, "type": "jsonl", "data": json_lines}
-        
-        elif ext == "json":  # Handle JSON files
-            json_data = json.loads(content)
-            return {"filename": versioned_filename, "type": "json", "data": json_data}
-        
+            return StreamingResponse(content=generate_stream(stream))
         else:
             raise HTTPException(status_code=400, detail="Unsupported file format.")
 
-    except Exception as e:
+    except Exception as e: 
+        logging.exception("ERR")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -132,20 +132,9 @@ async def fetch_and_store_dataset(repo_id: str, filename: str, version: str = "1
         blob_client = container_client.get_blob_client(versioned_filename)
 
         if ext == "csv":
-            dataset = pd.read_csv(file_path)
-            csv_data = dataset.to_csv(index=False)
-            blob_client.upload_blob(csv_data, overwrite=True)
-        
-        elif ext == "jsonl":
             with open(file_path, "r", encoding="utf-8") as f:
-                json_data = f.read()
-            blob_client.upload_blob(json_data, overwrite=True)
-        
-        elif ext == "json":  # Handle JSON files
-            with open(file_path, "r", encoding="utf-8") as f:
-                json_data = json.load(f)
-            blob_client.upload_blob(json.dumps(json_data), overwrite=True)
-        
+                data = f.read()
+            blob_client.upload_blob(data, overwrite=True)   
         else:
             raise HTTPException(status_code=400, detail="Unsupported file format.")
 
