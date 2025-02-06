@@ -57,7 +57,7 @@ jobs:
             docker pull ${{ secrets.ACR_NAME }}.azurecr.io/${{ secrets.IMAGE_NAME }}:latest
             docker stop ${{ secrets.IMAGE_NAME }} || true
             docker rm ${{ secrets.IMAGE_NAME }}|| true
-            docker run -d --name ${{ secrets.IMAGE_NAME }} -p 80:80 ${{ secrets.ACR_NAME }}.azurecr.io/${{ secrets.IMAGE_NAME }}:latest
+            docker run -d --name ${{ secrets.IMAGE_NAME }} -v /home/azureuser/.env -p 80:80 ${{ secrets.ACR_NAME }}.azurecr.io/${{ secrets.IMAGE_NAME }}:latest
 
   # deploy-to-aks:
   #   name: Deploy to AKS
