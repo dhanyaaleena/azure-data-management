@@ -9,7 +9,7 @@ on:
 env:
   RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
   ACR_NAME: ${{ secrets.ACR_NAME }}
-  IMAGE_NAME: "dataset-api"
+  IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
   IMAGE_TAG: "latest"
   # CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
   NAMESPACE: "default" 
@@ -34,8 +34,8 @@ jobs:
 
   #     - name: Build and Push Docker Image
   #       run: |
-  #         docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG .
-  #         docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+  #         docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:latest.
+  #         docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:latest
 
   deploy-to-vm:
     name: Deploy to Virtual Machine
@@ -52,10 +52,12 @@ jobs:
           username: azureuser
           password: ${{ secrets.PASSWORD }}
           script: |
-            docker pull $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+            az login --service-principal --username ${{ secrets.APP_ID }} --password ${{ secrets.CLIENT_SECRET }} --tenant ${{ secrets.TENANT_ID }}
+            az acr login --name $ACR_NAME
+            docker pull $ACR_NAME.azurecr.io/$IMAGE_NAME:latest
             docker stop $IMAGE_NAME || true
             docker rm $IMAGE_NAME || true
-            docker run -d --name $IMAGE_NAME -p 80:80 $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+            docker run -d --name $IMAGE_NAME -p 80:80 $ACR_NAME.azurecr.io/$IMAGE_NAME:latest
 
   # deploy-to-aks:
   #   name: Deploy to AKS
